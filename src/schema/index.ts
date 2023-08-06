@@ -4,17 +4,38 @@ export const createUserScheme = {
   type: "object",
   properties: {
     email: {type: "string", format: "email"},
-    // password: {type: "string", minLength: 8},
-    password: {type: "string"},
+    password: {type: "string", minLength: 8},
   },
   required: ["email", "password"],
   additionalProperties: false,
   errorMessage: {
-    type: "should be an object", // will not replace internal "type" error for the property "foo"
+    type: "should be an object",
   },
-  //optionalProperties: true
+};
+
+export const updateUserScheme = {
+  type: "object",
+  properties: {
+    email: {type: "string", format: "email"},
+    password: {type: "string", minLength: 8},
+    uuid: {type: "string"},
+  },
+  required: ["uuid"],
+  anyOf: [
+    {
+      required: ["email"],
+    },
+    {
+      required: ["password"],
+    },
+  ],
+  additionalProperties: false,
+  errorMessage: {
+    type: "should be an object",
+  },
 };
 
 const validateCreateUser = ajvInstance.compile(createUserScheme);
+const validateUpdateUser = ajvInstance.compile(updateUserScheme);
 
-export {validateCreateUser};
+export {validateCreateUser, validateUpdateUser};

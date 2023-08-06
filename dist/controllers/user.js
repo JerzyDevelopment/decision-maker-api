@@ -28,7 +28,7 @@ function get(req, res, next) {
                 throw { response_code: 400, message: "Error in User find one" };
             });
             if (!user) {
-                throw { response_code: 404, message: "User with the UUID not found" };
+                throw { response_code: 404, message: "User with that UUID not found" };
             }
             return res.send({ success: true, user });
         }
@@ -38,19 +38,79 @@ function get(req, res, next) {
     });
 }
 function create(req, res, next) {
+    var _a, _b;
     return __awaiter(this, void 0, void 0, function* () {
         try {
             console.log("* * * Inside User Create * * *");
-            const uuid = (0, uuid_1.v4)();
             const valid = (0, schema_1.validateCreateUser)(req === null || req === void 0 ? void 0 : req.body);
             if (!valid) {
-                throw { response_code: 400, message: "Invalid data being passed" };
+                throw { response_code: 400, message: "Invalid data object being passed" };
             }
-            const createUser = yield User.create(Object.assign(Object.assign({}, req === null || req === void 0 ? void 0 : req.body), { uuid })).catch((err) => {
-                console.log("Error in User create:", err);
-                throw { response_code: 400, message: "Error in User create" };
+            let dataObj = {
+                email: (_a = req === null || req === void 0 ? void 0 : req.body) === null || _a === void 0 ? void 0 : _a.email,
+                password: (_b = req === null || req === void 0 ? void 0 : req.body) === null || _b === void 0 ? void 0 : _b.password,
+                uuid: (0, uuid_1.v4)(),
+            };
+            const existingUser = yield User.findOne({
+                where: {
+                    email: { [Op.eq]: dataObj === null || dataObj === void 0 ? void 0 : dataObj.email },
+                },
+            }).catch((err) => {
+                console.log("Error in User create find existing:", err);
+                throw { response_code: 400, message: "Error in User create find existing" };
+            });
+            if (existingUser) {
+                throw {
+                    response_code: 409,
+                    message: "User with this email already exists",
+                };
+            }
+            const createUser = yield User.create(dataObj).catch((err) => {
+                console.log("Error in User create new:", err);
+                throw { response_code: 400, message: "Error in User create new" };
             });
             return res.send({ success: true, user: createUser });
+        }
+        catch (err) {
+            return res.status(err.response_code).send(err);
+        }
+    });
+}
+function update(req, res, next) {
+    return __awaiter(this, void 0, void 0, function* () {
+        try {
+            console.log("* * * Inside User Update * * *");
+            const valid = (0, schema_1.validateUpdateUser)(req === null || req === void 0 ? void 0 : req.body);
+            if (!valid) {
+                throw { response_code: 400, message: "Invalid data object being passed" };
+            }
+            const data = req === null || req === void 0 ? void 0 : req.body;
+            const uuid = data === null || data === void 0 ? void 0 : data.uuid;
+            data === null || data === void 0 ? true : delete data.uuid;
+            const userExists = yield User.findOne({
+                where: {
+                    uuid: {
+                        [Op.eq]: uuid,
+                    },
+                },
+            }).catch((err) => {
+                console.log("Error in User update find existing:", err);
+                throw { response_code: 400, message: "Error in User update find existing" };
+            });
+            if (!userExists) {
+                throw { response_code: 404, message: "User with that UUID not found" };
+            }
+            const updateUser = yield User.update(data, {
+                where: {
+                    uuid: {
+                        [Op.eq]: uuid,
+                    },
+                },
+            }).catch((err) => {
+                console.log("Error in User update:", err);
+                throw { response_code: 400, message: "Error in User update" };
+            });
+            return res.send({ success: true, message: "Successfully updated user" });
         }
         catch (err) {
             return res.status(err.response_code).send(err);
@@ -60,4 +120,5 @@ function create(req, res, next) {
 exports.default = {
     get,
     create,
+    update,
 };

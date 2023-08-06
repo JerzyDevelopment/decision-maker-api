@@ -5,5 +5,6 @@ const router = Router();
 
 router.get("/get/:uuid", user.get);
 router.post("/create", user.create);
+router.post("/update", user.update);
 
 export default router;
