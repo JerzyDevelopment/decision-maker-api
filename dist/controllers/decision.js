@@ -95,7 +95,7 @@ function create(req, res, next) {
             });
             const createDecision = yield Decision.create(decisionObj).catch((err) => {
                 console.log("Error in Decision create:", err);
-                throw { response_code: 400, message: "Error in Decision create" };
+                throw { response_code: 400, message: err };
             });
             return res.send({ success: true, decision: createDecision });
         }

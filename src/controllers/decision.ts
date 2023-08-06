@@ -101,7 +101,7 @@ async function create(req: Request, res: Response, next: NextFunction) {
     const createDecision = await Decision.create(decisionObj).catch(
       (err: any) => {
         console.log("Error in Decision create:", err);
-        throw {response_code: 400, message: "Error in Decision create"};
+        throw {response_code: 400, message: err};
       }
     );
 
