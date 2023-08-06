@@ -1,6 +1,7 @@
 import {Request, Response, NextFunction} from "express";
 import {v4 as uuidv4} from "uuid";
 import {validateCreateUser, validateUpdateUser} from "../schema";
+import {iUpdateUserObj, iUserObj} from "../types";
 
 const {User} = require("../../models");
 const Sequelize = require("sequelize");
@@ -41,7 +42,7 @@ async function create(req: Request, res: Response, next: NextFunction) {
       throw {response_code: 400, message: "Invalid data object being passed"};
     }
 
-    let dataObj = {
+    const userObj: iUserObj = {
       email: req?.body?.email,
       password: req?.body?.password,
       uuid: uuidv4(),
@@ -49,7 +50,7 @@ async function create(req: Request, res: Response, next: NextFunction) {
 
     const existingUser = await User.findOne({
       where: {
-        email: {[Op.eq]: dataObj?.email},
+        email: {[Op.eq]: userObj?.email},
       },
     }).catch((err: any) => {
       console.log("Error in User create find existing:", err);
@@ -63,7 +64,7 @@ async function create(req: Request, res: Response, next: NextFunction) {
       };
     }
 
-    const createUser = await User.create(dataObj).catch((err: any) => {
+    const createUser = await User.create(userObj).catch((err: any) => {
       console.log("Error in User create new:", err);
       throw {response_code: 400, message: "Error in User create new"};
     });
@@ -84,10 +85,9 @@ async function update(req: Request, res: Response, next: NextFunction) {
       throw {response_code: 400, message: "Invalid data object being passed"};
     }
 
-    const data = req?.body;
+    const data: iUpdateUserObj = req?.body;
 
     const uuid = data?.uuid;
-    delete data?.uuid;
 
     const userExists = await User.findOne({
       where: {

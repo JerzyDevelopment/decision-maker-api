@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.validateUpdateUser = exports.validateCreateUser = exports.updateUserScheme = exports.createUserScheme = void 0;
+exports.validateCreateDecision = exports.validateUpdateUser = exports.validateCreateUser = exports.createDecisionScheme = exports.updateUserScheme = exports.createUserScheme = void 0;
 const ajv_instance_1 = __importDefault(require("./ajv-instance"));
 exports.createUserScheme = {
     type: "object",
@@ -38,7 +38,25 @@ exports.updateUserScheme = {
         type: "should be an object",
     },
 };
+exports.createDecisionScheme = {
+    type: "object",
+    properties: {
+        name: { type: "string" },
+        selectedOptionId: { type: "integer" },
+        isDecided: { type: "boolean" },
+        userId: { type: "integer" },
+        priorityFieldId: { type: "integer" },
+        negativeFieldId: { type: "integer" },
+    },
+    required: ["name", "userId"],
+    additionalProperties: false,
+    errorMessage: {
+        type: "should be an object",
+    },
+};
 const validateCreateUser = ajv_instance_1.default.compile(exports.createUserScheme);
 exports.validateCreateUser = validateCreateUser;
 const validateUpdateUser = ajv_instance_1.default.compile(exports.updateUserScheme);
 exports.validateUpdateUser = validateUpdateUser;
+const validateCreateDecision = ajv_instance_1.default.compile(exports.createDecisionScheme);
+exports.validateCreateDecision = validateCreateDecision;
