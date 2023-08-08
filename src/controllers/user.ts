@@ -2,6 +2,7 @@ import {Request, Response, NextFunction} from "express";
 import {v4 as uuidv4} from "uuid";
 import {validateCreateUser, validateUpdateUser} from "../schema";
 import {iUpdateUserObj, iUserObj} from "../types";
+import checkUserExists from "../utils/checkUserExists";
 
 const {User} = require("../../models");
 const Sequelize = require("sequelize");
@@ -13,20 +14,13 @@ async function get(req: Request, res: Response, next: NextFunction) {
 
     const {uuid} = req.params;
 
-    const user = await User.findOne({
-      where: {
-        uuid: {[Op.eq]: uuid},
-      },
-    }).catch((err: any) => {
-      console.log("Error in User find one:", err);
-      throw {response_code: 400, message: "Error in User find one"};
-    });
+    const userExists = await checkUserExists("uuid", uuid);
 
-    if (!user) {
+    if (!userExists?.success) {
       throw {response_code: 404, message: "User with that UUID not found"};
     }
 
-    return res.send({success: true, user});
+    return res.send({success: true, user: userExists?.user});
   } catch (err: any) {
     return res.status(err.response_code).send(err);
   }
@@ -48,16 +42,9 @@ async function create(req: Request, res: Response, next: NextFunction) {
       uuid: uuidv4(),
     };
 
-    const existingUser = await User.findOne({
-      where: {
-        email: {[Op.eq]: userObj?.email},
-      },
-    }).catch((err: any) => {
-      console.log("Error in User create find existing:", err);
-      throw {response_code: 400, message: "Error in User create find existing"};
-    });
+    const userExists = await checkUserExists("email", userObj?.email);
 
-    if (existingUser) {
+    if (userExists?.success) {
       throw {
         response_code: 409,
         message: "User with this email already exists",
@@ -89,25 +76,16 @@ async function update(req: Request, res: Response, next: NextFunction) {
 
     const uuid = data?.uuid;
 
-    const userExists = await User.findOne({
-      where: {
-        uuid: {
-          [Op.eq]: uuid,
-        },
-      },
-    }).catch((err: any) => {
-      console.log("Error in User update find existing:", err);
-      throw {response_code: 400, message: "Error in User update find existing"};
-    });
+    const userExists = await checkUserExists("uuid", uuid);
 
-    if (!userExists) {
+    if (!userExists?.success) {
       throw {response_code: 404, message: "User with that UUID not found"};
     }
 
     const updateUser = await User.update(data, {
       where: {
-        uuid: {
-          [Op.eq]: uuid,
+        id: {
+          [Op.eq]: userExists?.user?.id,
         },
       },
     }).catch((err: any) => {

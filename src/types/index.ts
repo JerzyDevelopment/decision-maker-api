@@ -19,3 +19,13 @@ export interface iCreateDecision {
   priorityFieldId?: number;
   negativeFieldId?: number;
 }
+
+export interface iUpdateDecision {
+  [key: string]: string | number | boolean | void;
+  name?: string;
+  selectedOptionId?: number;
+  isDecided?: boolean;
+  priorityFieldId?: number;
+  negativeFieldId?: number;
+  userUuid?: string;
+}

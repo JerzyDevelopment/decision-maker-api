@@ -8,8 +8,8 @@ module.exports = {
         table: "Fields",
         field: "id",
       },
-      onDelete: "RESTRICT",
-      onUpdate: "RESTRICT",
+      onDelete: "CASCADE",
+      onUpdate: "CASCADE",
     });
 
     await queryInterface.addConstraint("Decisions", {
@@ -19,8 +19,8 @@ module.exports = {
         table: "Fields",
         field: "id",
       },
-      onDelete: "RESTRICT",
-      onUpdate: "RESTRICT",
+      onDelete: "CASCADE",
+      onUpdate: "CASCADE",
     });
 
     await queryInterface.addConstraint("Decisions", {

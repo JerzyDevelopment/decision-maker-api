@@ -1,8 +1,9 @@
 import {Request, Response, NextFunction} from "express";
-import {validateCreateDecision} from "../schema";
-import {iCreateDecision} from "../types";
+import {validateCreateDecision, validateUpdateDecision} from "../schema";
+import {iCreateDecision, iUpdateDecision} from "../types";
+import checkUserExists from "../utils/checkUserExists";
 
-const {User, Decision} = require("../../models");
+const {Decision} = require("../../models");
 const Sequelize = require("sequelize");
 const Op = Sequelize.Op;
 
@@ -12,22 +13,15 @@ async function getAll(req: Request, res: Response, next: NextFunction) {
 
     const {uuid} = req.params;
 
-    const user = await User.findOne({
-      where: {
-        uuid: {[Op.eq]: uuid},
-      },
-    }).catch((err: any) => {
-      console.log("Error in User find one:", err);
-      throw {response_code: 400, message: "Error in User find one"};
-    });
+    const userExists = await checkUserExists("uuid", uuid);
 
-    if (!user) {
+    if (!userExists?.success) {
       throw {response_code: 404, message: "User with that UUID not found"};
     }
 
     const decisions = await Decision.findAll({
       where: {
-        userId: {[Op.eq]: user.id},
+        userId: {[Op.eq]: userExists?.user?.id},
       },
       raw: true,
     }).catch((err: any) => {
@@ -56,26 +50,29 @@ async function create(req: Request, res: Response, next: NextFunction) {
       userId: req?.body?.userId,
     };
 
-    const user = await User.findOne({
-      where: {
-        id: {[Op.eq]: decisionObj.userId},
-      },
-    }).catch((err: any) => {
-      console.log("Error in Decision find one:", err);
-      throw {response_code: 400, message: "Error in Decision find one"};
-    });
+    const userExists = await checkUserExists("id", decisionObj.userId);
 
-    if (!user) {
+    if (!userExists?.success) {
       throw {
         response_code: 409,
-        message: "No user found with that Id",
+        message: "No user found with that id",
+      };
+    }
+
+    const correctUuid = userExists?.user?.uuid === req?.body?.userUuid;
+
+    if (!correctUuid) {
+      throw {
+        response_code: 400,
+        message:
+          "passed userUuid does not match uuid on record for user with that id",
       };
     }
 
     const existingDecision = await Decision.findOne({
       where: {
-        userId: {[Op.eq]: decisionObj.userId},
-        name: {[Op.eq]: decisionObj.name},
+        userId: {[Op.eq]: decisionObj?.userId},
+        name: {[Op.eq]: decisionObj?.name},
       },
     }).catch((err: any) => {
       console.log("Error in Decision find one:", err);
@@ -111,7 +108,62 @@ async function create(req: Request, res: Response, next: NextFunction) {
   }
 }
 
+async function update(req: Request, res: Response, next: NextFunction) {
+  try {
+    console.log("* * * Inside Decision Update * * *");
+
+    const valid = validateUpdateDecision(req?.body);
+
+    if (!valid) {
+      throw {response_code: 400, message: "Invalid data object being passed"};
+    }
+
+    const userExists = await checkUserExists("id", req?.body?.userId);
+
+    if (!userExists?.success) {
+      throw {
+        response_code: 409,
+        message: "No user found with that id",
+      };
+    }
+
+    const correctUuid = userExists?.user?.uuid === req?.body?.userUuid;
+
+    if (!correctUuid) {
+      throw {
+        response_code: 400,
+        message:
+          "passed userUuid does not match uuid on record for user with that id",
+      };
+    }
+
+    const dataObj: iUpdateDecision = {...req?.body};
+
+    const decisionId = dataObj?.id;
+
+    delete dataObj?.id;
+    delete dataObj?.userId;
+    delete dataObj?.userUuid;
+
+    console.log(dataObj, "DATA OBJ");
+
+    const updateDecision = await Decision.update(dataObj, {
+      where: {
+        id: {[Op.eq]: decisionId},
+      },
+    }).catch((err: any) => {
+      console.log("Error in Decision update:", err);
+      throw {response_code: 400, message: "Error in Decision update"};
+    });
+
+    return res.send({success: true, message: "Successfully updated decision"});
+  } catch (err: any) {
+    return res.status(err.response_code).send(err);
+  }
+}
+
 export default {
   getAll,
   create,
+  update,
 };

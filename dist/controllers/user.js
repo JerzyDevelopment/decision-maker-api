@@ -8,9 +8,13 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 const uuid_1 = require("uuid");
 const schema_1 = require("../schema");
+const checkUserExists_1 = __importDefault(require("../utils/checkUserExists"));
 const { User } = require("../../models");
 const Sequelize = require("sequelize");
 const Op = Sequelize.Op;
@@ -19,18 +23,11 @@ function get(req, res, next) {
         try {
             console.log("* * * Inside User Get * * *");
             const { uuid } = req.params;
-            const user = yield User.findOne({
-                where: {
-                    uuid: { [Op.eq]: uuid },
-                },
-            }).catch((err) => {
-                console.log("Error in User find one:", err);
-                throw { response_code: 400, message: "Error in User find one" };
-            });
-            if (!user) {
+            const userExists = yield (0, checkUserExists_1.default)("uuid", uuid);
+            if (!(userExists === null || userExists === void 0 ? void 0 : userExists.success)) {
                 throw { response_code: 404, message: "User with that UUID not found" };
             }
-            return res.send({ success: true, user });
+            return res.send({ success: true, user: userExists === null || userExists === void 0 ? void 0 : userExists.user });
         }
         catch (err) {
             return res.status(err.response_code).send(err);
@@ -51,15 +48,8 @@ function create(req, res, next) {
                 password: (_b = req === null || req === void 0 ? void 0 : req.body) === null || _b === void 0 ? void 0 : _b.password,
                 uuid: (0, uuid_1.v4)(),
             };
-            const existingUser = yield User.findOne({
-                where: {
-                    email: { [Op.eq]: userObj === null || userObj === void 0 ? void 0 : userObj.email },
-                },
-            }).catch((err) => {
-                console.log("Error in User create find existing:", err);
-                throw { response_code: 400, message: "Error in User create find existing" };
-            });
-            if (existingUser) {
+            const userExists = yield (0, checkUserExists_1.default)("email", userObj === null || userObj === void 0 ? void 0 : userObj.email);
+            if (userExists === null || userExists === void 0 ? void 0 : userExists.success) {
                 throw {
                     response_code: 409,
                     message: "User with this email already exists",
@@ -77,6 +67,7 @@ function create(req, res, next) {
     });
 }
 function update(req, res, next) {
+    var _a;
     return __awaiter(this, void 0, void 0, function* () {
         try {
             console.log("* * * Inside User Update * * *");
@@ -86,23 +77,14 @@ function update(req, res, next) {
             }
             const data = req === null || req === void 0 ? void 0 : req.body;
             const uuid = data === null || data === void 0 ? void 0 : data.uuid;
-            const userExists = yield User.findOne({
-                where: {
-                    uuid: {
-                        [Op.eq]: uuid,
-                    },
-                },
-            }).catch((err) => {
-                console.log("Error in User update find existing:", err);
-                throw { response_code: 400, message: "Error in User update find existing" };
-            });
-            if (!userExists) {
+            const userExists = yield (0, checkUserExists_1.default)("uuid", uuid);
+            if (!(userExists === null || userExists === void 0 ? void 0 : userExists.success)) {
                 throw { response_code: 404, message: "User with that UUID not found" };
             }
             const updateUser = yield User.update(data, {
                 where: {
-                    uuid: {
-                        [Op.eq]: uuid,
+                    id: {
+                        [Op.eq]: (_a = userExists === null || userExists === void 0 ? void 0 : userExists.user) === null || _a === void 0 ? void 0 : _a.id,
                     },
                 },
             }).catch((err) => {

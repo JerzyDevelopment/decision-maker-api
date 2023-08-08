@@ -1,8 +1,11 @@
 import express, {Express, Request, Response} from "express";
 import dotenv from "dotenv";
+import bodyParser from "body-parser";
+
+//routes
 import r_user from "./routes/user";
 import r_decision from "./routes/decision";
-import bodyParser from "body-parser";
+import r_option from "./routes/option";
 
 dotenv.config();
 
@@ -24,6 +27,7 @@ app.use(bodyParser.urlencoded({extended: true}));
 
 app.use("/user", r_user);
 app.use("/decision", r_decision);
+app.use("/option", r_option);
 
 app.get("/", (req: Request, res: Response) => {
   res.send("Express + TypeScript Server");

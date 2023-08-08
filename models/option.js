@@ -10,8 +10,8 @@ module.exports = (sequelize, DataTypes) => {
     static associate({Field, Decision}) {
       this.hasMany(Field, {foreignKey: "optionId", as: "Field"});
       this.belongsTo(Decision, {
-        foreignKey: "selectedOptionId",
-        as: "selectedOption",
+        foreignKey: "decisionId",
+        as: "decision",
       });
     }
   }
