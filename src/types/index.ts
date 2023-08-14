@@ -7,7 +7,7 @@ export interface iUserObj {
 export interface iUpdateUserObj {
   email?: string;
   password?: string;
-  uuid: string;
+  id: number;
 }
 
 export interface iCreateDecision {

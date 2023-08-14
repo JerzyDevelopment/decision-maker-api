@@ -67,7 +67,6 @@ function create(req, res, next) {
     });
 }
 function update(req, res, next) {
-    var _a;
     return __awaiter(this, void 0, void 0, function* () {
         try {
             console.log("* * * Inside User Update * * *");
@@ -76,15 +75,14 @@ function update(req, res, next) {
                 throw { response_code: 400, message: "Invalid data object being passed" };
             }
             const data = req === null || req === void 0 ? void 0 : req.body;
-            const uuid = data === null || data === void 0 ? void 0 : data.uuid;
-            const userExists = yield (0, checkUserExists_1.default)("uuid", uuid);
+            const userExists = yield (0, checkUserExists_1.default)("id", data === null || data === void 0 ? void 0 : data.id);
             if (!(userExists === null || userExists === void 0 ? void 0 : userExists.success)) {
-                throw { response_code: 404, message: "User with that UUID not found" };
+                throw { response_code: 404, message: "User with that id not found" };
             }
             const updateUser = yield User.update(data, {
                 where: {
                     id: {
-                        [Op.eq]: (_a = userExists === null || userExists === void 0 ? void 0 : userExists.user) === null || _a === void 0 ? void 0 : _a.id,
+                        [Op.eq]: data === null || data === void 0 ? void 0 : data.id,
                     },
                 },
             }).catch((err) => {
@@ -98,8 +96,37 @@ function update(req, res, next) {
         }
     });
 }
+function deleteFunc(req, res, next) {
+    var _a, _b, _c, _d;
+    return __awaiter(this, void 0, void 0, function* () {
+        try {
+            console.log("* * * Inside User Delete * * *");
+            const valid = (0, schema_1.validateDeleteUser)(req === null || req === void 0 ? void 0 : req.body);
+            if (!valid) {
+                throw { response_code: 400, message: "Invalid data object being passed" };
+            }
+            const userExists = yield (0, checkUserExists_1.default)("id", (_a = req === null || req === void 0 ? void 0 : req.body) === null || _a === void 0 ? void 0 : _a.id);
+            if (!(userExists === null || userExists === void 0 ? void 0 : userExists.success)) {
+                throw { response_code: 404, message: "User with that id not found" };
+            }
+            const correctUuid = ((_b = userExists === null || userExists === void 0 ? void 0 : userExists.user) === null || _b === void 0 ? void 0 : _b.uuid) === ((_c = req === null || req === void 0 ? void 0 : req.body) === null || _c === void 0 ? void 0 : _c.uuid);
+            if (!correctUuid) {
+                throw {
+                    response_code: 400,
+                    message: "passed uuid does not match uuid on record for user with that id",
+                };
+            }
+            yield ((_d = userExists === null || userExists === void 0 ? void 0 : userExists.user) === null || _d === void 0 ? void 0 : _d.destroy());
+            return res.send({ success: true, message: "User successfully deleted" });
+        }
+        catch (err) {
+            return res.status(err.response_code).send(err);
+        }
+    });
+}
 exports.default = {
     get,
     create,
     update,
+    deleteFunc,
 };

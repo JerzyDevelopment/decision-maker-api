@@ -18,18 +18,28 @@ const { Decision } = require("../../models");
 const Sequelize = require("sequelize");
 const Op = Sequelize.Op;
 function getAll(req, res, next) {
-    var _a;
+    var _a, _b, _c, _d;
     return __awaiter(this, void 0, void 0, function* () {
         try {
             console.log("* * * Inside Decision Get All * * *");
-            const { uuid } = req.params;
-            const userExists = yield (0, checkUserExists_1.default)("uuid", uuid);
+            const valid = (0, schema_1.validateGetAllDecision)(req === null || req === void 0 ? void 0 : req.body);
+            if (!valid) {
+                throw { response_code: 400, message: "Invalid data object being passed" };
+            }
+            const userExists = yield (0, checkUserExists_1.default)("id", (_a = req === null || req === void 0 ? void 0 : req.body) === null || _a === void 0 ? void 0 : _a.userId);
             if (!(userExists === null || userExists === void 0 ? void 0 : userExists.success)) {
-                throw { response_code: 404, message: "User with that UUID not found" };
+                throw { response_code: 404, message: "User with that id not found" };
+            }
+            const correctUuid = ((_b = userExists === null || userExists === void 0 ? void 0 : userExists.user) === null || _b === void 0 ? void 0 : _b.uuid) === ((_c = req === null || req === void 0 ? void 0 : req.body) === null || _c === void 0 ? void 0 : _c.userUuid);
+            if (!correctUuid) {
+                throw {
+                    response_code: 400,
+                    message: "passed userUuid does not match uuid on record for user with that id",
+                };
             }
             const decisions = yield Decision.findAll({
                 where: {
-                    userId: { [Op.eq]: (_a = userExists === null || userExists === void 0 ? void 0 : userExists.user) === null || _a === void 0 ? void 0 : _a.id },
+                    userId: { [Op.eq]: (_d = userExists === null || userExists === void 0 ? void 0 : userExists.user) === null || _d === void 0 ? void 0 : _d.id },
                 },
                 raw: true,
             }).catch((err) => {
@@ -59,7 +69,7 @@ function create(req, res, next) {
             const userExists = yield (0, checkUserExists_1.default)("id", decisionObj.userId);
             if (!(userExists === null || userExists === void 0 ? void 0 : userExists.success)) {
                 throw {
-                    response_code: 409,
+                    response_code: 404,
                     message: "No user found with that id",
                 };
             }
@@ -114,7 +124,7 @@ function update(req, res, next) {
             const userExists = yield (0, checkUserExists_1.default)("id", (_a = req === null || req === void 0 ? void 0 : req.body) === null || _a === void 0 ? void 0 : _a.userId);
             if (!(userExists === null || userExists === void 0 ? void 0 : userExists.success)) {
                 throw {
-                    response_code: 409,
+                    response_code: 404,
                     message: "No user found with that id",
                 };
             }
@@ -130,10 +140,24 @@ function update(req, res, next) {
             dataObj === null || dataObj === void 0 ? true : delete dataObj.id;
             dataObj === null || dataObj === void 0 ? true : delete dataObj.userId;
             dataObj === null || dataObj === void 0 ? true : delete dataObj.userUuid;
-            console.log(dataObj, "DATA OBJ");
-            const updateDecision = yield Decision.update(dataObj, {
+            const decisionExists = yield Decision.findOne({
                 where: {
                     id: { [Op.eq]: decisionId },
+                },
+                raw: true,
+            }).catch((err) => {
+                console.log("Error in Option find one:", err);
+                throw { response_code: 400, message: "Error in Option find one " };
+            });
+            if (!decisionExists) {
+                throw {
+                    response_code: 404,
+                    message: "No decision found with that id",
+                };
+            }
+            const updateDecision = yield Decision.update(dataObj, {
+                where: {
+                    id: { [Op.eq]: decisionExists.id },
                 },
             }).catch((err) => {
                 console.log("Error in Decision update:", err);
@@ -146,8 +170,51 @@ function update(req, res, next) {
         }
     });
 }
+function deleteFunc(req, res, next) {
+    var _a, _b, _c, _d;
+    return __awaiter(this, void 0, void 0, function* () {
+        try {
+            console.log("* * * Inside Decision Delete * * *");
+            const valid = (0, schema_1.validateDeleteDecision)(req === null || req === void 0 ? void 0 : req.body);
+            if (!valid) {
+                throw { response_code: 400, message: "Invalid data object being passed" };
+            }
+            const userExists = yield (0, checkUserExists_1.default)("uuid", (_a = req === null || req === void 0 ? void 0 : req.body) === null || _a === void 0 ? void 0 : _a.userUuid);
+            if (!(userExists === null || userExists === void 0 ? void 0 : userExists.success)) {
+                throw { response_code: 404, message: "User with that UUID not found" };
+            }
+            const correctUuid = ((_b = userExists === null || userExists === void 0 ? void 0 : userExists.user) === null || _b === void 0 ? void 0 : _b.uuid) === ((_c = req === null || req === void 0 ? void 0 : req.body) === null || _c === void 0 ? void 0 : _c.userUuid);
+            if (!correctUuid) {
+                throw {
+                    response_code: 400,
+                    message: "passed userUuid does not match uuid on record for user with that id",
+                };
+            }
+            const decision = yield Decision.findOne({
+                where: {
+                    id: { [Op.eq]: (_d = req === null || req === void 0 ? void 0 : req.body) === null || _d === void 0 ? void 0 : _d.id },
+                },
+            }).catch((err) => {
+                console.log("Error in Decision delete find one:", err);
+                throw { response_code: 400, message: "Error in Decision delete find one" };
+            });
+            if (!decision) {
+                throw {
+                    response_code: 400,
+                    message: "No Decision found with that id that belongs to provided user uuid",
+                };
+            }
+            yield (decision === null || decision === void 0 ? void 0 : decision.destroy());
+            return res.send({ success: true, message: "Decision successfully deleted" });
+        }
+        catch (err) {
+            return res.status(err.response_code).send(err);
+        }
+    });
+}
 exports.default = {
     getAll,
     create,
     update,
+    deleteFunc,
 };

@@ -3,8 +3,9 @@ import decision from "../controllers/decision";
 
 const router = Router();
 
-router.get("/get-all/:uuid", decision.getAll);
+router.post("/get-all", decision.getAll);
 router.post("/create", decision.create);
 router.post("/update", decision.update);
+router.post("/delete", decision.deleteFunc);
 
 export default router;

@@ -1,5 +1,10 @@
 import {Request, Response, NextFunction} from "express";
-import {validateCreateDecision, validateUpdateDecision} from "../schema";
+import {
+  validateCreateDecision,
+  validateDeleteDecision,
+  validateGetAllDecision,
+  validateUpdateDecision,
+} from "../schema";
 import {iCreateDecision, iUpdateDecision} from "../types";
 import checkUserExists from "../utils/checkUserExists";
 
@@ -11,12 +16,26 @@ async function getAll(req: Request, res: Response, next: NextFunction) {
   try {
     console.log("* * * Inside Decision Get All * * *");
 
-    const {uuid} = req.params;
+    const valid = validateGetAllDecision(req?.body);
 
-    const userExists = await checkUserExists("uuid", uuid);
+    if (!valid) {
+      throw {response_code: 400, message: "Invalid data object being passed"};
+    }
+
+    const userExists = await checkUserExists("id", req?.body?.userId);
 
     if (!userExists?.success) {
-      throw {response_code: 404, message: "User with that UUID not found"};
+      throw {response_code: 404, message: "User with that id not found"};
+    }
+
+    const correctUuid = userExists?.user?.uuid === req?.body?.userUuid;
+
+    if (!correctUuid) {
+      throw {
+        response_code: 400,
+        message:
+          "passed userUuid does not match uuid on record for user with that id",
+      };
     }
 
     const decisions = await Decision.findAll({
@@ -54,7 +73,7 @@ async function create(req: Request, res: Response, next: NextFunction) {
 
     if (!userExists?.success) {
       throw {
-        response_code: 409,
+        response_code: 404,
         message: "No user found with that id",
       };
     }
@@ -122,7 +141,7 @@ async function update(req: Request, res: Response, next: NextFunction) {
 
     if (!userExists?.success) {
       throw {
-        response_code: 409,
+        response_code: 404,
         message: "No user found with that id",
       };
     }
@@ -145,11 +164,26 @@ async function update(req: Request, res: Response, next: NextFunction) {
     delete dataObj?.userId;
     delete dataObj?.userUuid;
 
-    console.log(dataObj, "DATA OBJ");
+    const decisionExists = await Decision.findOne({
+      where: {
+        id: {[Op.eq]: decisionId},
+      },
+      raw: true,
+    }).catch((err: any) => {
+      console.log("Error in Option find one:", err);
+      throw {response_code: 400, message: "Error in Option find one "};
+    });
+
+    if (!decisionExists) {
+      throw {
+        response_code: 404,
+        message: "No decision found with that id",
+      };
+    }
 
     const updateDecision = await Decision.update(dataObj, {
       where: {
-        id: {[Op.eq]: decisionId},
+        id: {[Op.eq]: decisionExists.id},
       },
     }).catch((err: any) => {
       console.log("Error in Decision update:", err);
@@ -162,8 +196,60 @@ async function update(req: Request, res: Response, next: NextFunction) {
   }
 }
 
+async function deleteFunc(req: Request, res: Response, next: NextFunction) {
+  try {
+    console.log("* * * Inside Decision Delete * * *");
+
+    const valid = validateDeleteDecision(req?.body);
+
+    if (!valid) {
+      throw {response_code: 400, message: "Invalid data object being passed"};
+    }
+
+    const userExists = await checkUserExists("uuid", req?.body?.userUuid);
+
+    if (!userExists?.success) {
+      throw {response_code: 404, message: "User with that UUID not found"};
+    }
+
+    const correctUuid = userExists?.user?.uuid === req?.body?.userUuid;
+
+    if (!correctUuid) {
+      throw {
+        response_code: 400,
+        message:
+          "passed userUuid does not match uuid on record for user with that id",
+      };
+    }
+
+    const decision = await Decision.findOne({
+      where: {
+        id: {[Op.eq]: req?.body?.id},
+      },
+    }).catch((err: any) => {
+      console.log("Error in Decision delete find one:", err);
+      throw {response_code: 400, message: "Error in Decision delete find one"};
+    });
+
+    if (!decision) {
+      throw {
+        response_code: 400,
+        message:
+          "No Decision found with that id that belongs to provided user uuid",
+      };
+    }
+
+    await decision?.destroy();
+
+    return res.send({success: true, message: "Decision successfully deleted"});
+  } catch (err: any) {
+    return res.status(err.response_code).send(err);
+  }
+}
+
 export default {
   getAll,
   create,
   update,
+  deleteFunc,
 };

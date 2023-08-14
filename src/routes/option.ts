@@ -3,8 +3,8 @@ import option from "../controllers/option";
 
 const router = Router();
 
-router.get("/get-all/:uuid/:decisionId", option.getAll);
+router.post("/get-all", option.getAll);
 router.post("/create", option.create);
-// router.post("/update", option.update);
+router.post("/update", option.update);
 
 export default router;
